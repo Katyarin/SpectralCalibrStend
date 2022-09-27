@@ -37,7 +37,7 @@ class monochromator:
         req = {"reqtype":"setWavelength","wavelength":wavelength,"subsystem":"MDR"}
         ret = self.doRequest(req)
         print(ret)
-        time.sleep(15)
+        time.sleep(5)
         self.getWavelength()
 
 

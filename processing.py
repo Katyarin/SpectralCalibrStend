@@ -3,20 +3,32 @@ import json
 import math
 import numpy as np
 import raw_data_to_json
+import datetime
+
+current_time = datetime.datetime.now(tz=None)
+date = str(current_time.year) + str(current_time.month) + str(current_time.day)
+group = 3
+
+date = str(2022926)
+
+
 
 polyn = 34
 G = 10
+exp_list = []
 wave_list = []
 file_list = []
-with open('now_written.txt', 'r') as file_written:
+with open(str(date) + 'now_written.txt', 'r') as file_written:
     for line in file_written:
         data = line.split()
         print(data)
-        wave_list.append(int(data[0]))
-        file_list.append(data[1])
+        exp_list.append(int(data[0]))
+        wave_list.append(float(data[1]))
+        file_list.append(data[2])
 #file_n = '100pages.json'
 path = 'drs_raw_data/'
-path_real = 'C:/Users/user/Desktop/drs/'
+path_real = 'd:/data/db/debug/drs/'
+#path_real = 'C:/Users/user/Desktop/drs/'
 delete_s = int(len(path_real))
 
 plot_osc = False
@@ -45,7 +57,7 @@ def find_end_integration(signal):
 
 
 
-def to_phe(shotn, file_n):
+def to_phe(shotn, file_n, exp):
 
     filename = path + file_n
 
@@ -57,7 +69,7 @@ def to_phe(shotn, file_n):
     time_step = 1 / freq  # nanoseconds
     event_len = 1024
 
-    delta = {0: 0, 1: 150, 2: 170, 3: 190, 4: 200, 5: 210, 6: 0, 7: 0}
+    delta = {0: 0, 1: 770, 2: 790, 3: 790, 4: 800, 5: 810, 6: 830, 7: 0}
     delta_divertor = {0: 0, 1: -480, 2: -470, 3: -460, 4: -450, 5: -440, 6: -25, 7: 0}
     timestamps = []
     N_photo_el = {}
@@ -79,10 +91,11 @@ def to_phe(shotn, file_n):
         timestamps.append(event['t']/1000 + 3.73)
 
         #if max(event['ch'][1]) > 0.030:
-        if event['t']/1000 + 3.73 > time_for_start_plot and plot_osc:
+        if event['t']/1000 + 3.73 > time_for_start_plot and plot_osc and p < 5:
             fig2, axs2 = plt.subplots(3, 3)
             fig2.suptitle(event['t']/1000 + 3.73)
-            p = 1
+            p += 1
+            print(p)
         for ch in range(8):
             signal = event['ch'][ch]
             if max(signal) > 0.8:
@@ -93,15 +106,15 @@ def to_phe(shotn, file_n):
             if ch == 0 or ch == 7:
                 pre_sig = 100
             else:
-                pre_sig = 200
-            base_line = sum(signal[5:pre_sig]) / len(signal[5:pre_sig])
+                pre_sig = 400
+            base_line = sum(signal[10:pre_sig]) / len(signal[10:pre_sig])
             for i in range(len(signal)):
                 signal[i] = signal[i] - base_line
 
             if ch == 0:
                 index_0 = 0
                 for i, s in enumerate(signal[10:]):
-                    if s > 0.250:
+                    if s > 0.200:
                         index_0 = i - 20
                         #print(index_0)
                         break
@@ -111,7 +124,7 @@ def to_phe(shotn, file_n):
             var_in_sr = np.var(signal[5:pre_sig])
             delta_exp = {}
             if thomson == 'usual':
-                width = 100
+                width = 120
                 delta_exp[ch] = delta[ch]
             elif thomson == 'ust':
                 width = 250
@@ -122,11 +135,13 @@ def to_phe(shotn, file_n):
             else:
                 print('something wrong! Unnown config')
                 stop
-            start_index = find_start_integration(signal[10:-10]) - 5
-            end_index = find_end_integration(signal[10:-10]) + 5
+            '''start_index = find_start_integration(signal[10:-10]) - 5
+            end_index = find_end_integration(signal[10:-10]) + 5'''
+            start_index = index_0 + delta_exp[ch]
+            end_index = start_index + width
 
 
-            if p:
+            if 5>p>0:
                 #print(max(event['ch'][5]), event['t']/1000)
                 axs2[int(ch//3), int(ch%3)].set_title('ch = ' + str(ch))
                 axs2[int(ch//3), int(ch%3)].plot(signal)
@@ -141,8 +156,8 @@ def to_phe(shotn, file_n):
             N_photo_el[ch].append(Ni *1e-12)
             var = math.sqrt(math.fabs(6715 * 0.0625 * var_in_sr - 1.14e4 * 0.0625) + math.fabs(Ni *1e-12) * 4)
             var_phe[ch].append(var)
-        #plt.show()
-        p=0
+        plt.show()
+        #p=0
     '''plt.figure(figsize=(10, 3))
     plt.title('Shot #' + str(shotn))
     for ch in N_photo_el.keys():
@@ -178,26 +193,53 @@ def to_phe(shotn, file_n):
 '''
     #plt.show()
 
-    with open(res_data_path + '%d_N_phe.json' %shotn, 'w') as f:
+    with open(res_data_path + date + str(exp)+ '_%d_N_phe.json' %shotn, 'w') as f:
         for_temp = {'timeline': timestamps, 'data': N_photo_el, 'err': var_phe, 'culc_err': calc_err, 'laser_en': N_photo_el[6]}
         json.dump(for_temp, f)
 
-    with open('result_files.txt', 'a') as f_r:
+    with open(date + 'result_files' + str(exp) +'.txt', 'a') as f_r:
         f_r.write(str(shotn))
         f_r.write('    ')
         for ch in N_photo_el.keys():
-            f_r.write(str(sum(N_photo_el[ch]) / len(N_photo_el[ch])))
+            mean = sum(N_photo_el[ch]) / len(N_photo_el[ch])
+            sigma = (sum([(i - mean) * (i - mean) for i in N_photo_el[ch]]) / len(N_photo_el[ch]) / (len(N_photo_el[ch]) - 1))**0.5
+            f_r.write(str(mean))
             f_r.write('    ')
+            f_r.write(str(sigma))
+            f_r.write('    ')
+            print(ch, mean, sigma)
         f_r.write('\n')
 
+exp = 0
 for i, wave in enumerate(wave_list):
     print(i, wave)
+    if exp_list[i] > exp:
+        exp = exp_list[i]
+    if exp_list[i] != group:
+        print('no')
+        continue
     waves_read = []
-    with open('result_files.txt', 'r') as fin_file:
-        for line in fin_file:
-            waves_read.append(int(line.split()[0]))
+    try:
+        with open(date + 'result_files' + str(exp) +'.txt', 'r') as fin_file:
+            for line in fin_file:
+                waves_read.append(float(line.split()[0]))
+    except FileNotFoundError:
+        with open(date + 'result_files' + str(exp) + '.txt', 'w') as fin_file0:
+            fin_file0.write('0')
+            fin_file0.write('    ')
+            for ch in range(8):
+                fin_file0.write(str(ch))
+                fin_file0.write('    ')
     if wave in waves_read:
         print(wave, ' already done')
         continue
-    raw_data_to_json.to_json(str(file_list[i][delete_s:]), 7, 'c:/work/Code/SpectralCalibrStend/drs_raw_data/')
-    to_phe(wave, str(file_list[i][delete_s:]) + '.json')
+    try:
+        raw_data_to_json.to_json(str(file_list[i][delete_s:]), 7, 'c:/work/Code/SpectralCalibrStend/drs_raw_data/')
+    except ValueError:
+        print('value error in this datafile!!!')
+        continue
+    if wave == 1050 or wave == 1055 or wave == 1035 or wave == 1010 or wave == 950:
+        plot_osc = True
+    else:
+        plot_osc = False
+    to_phe(wave, str(file_list[i][delete_s:]) + '.json', exp_list[i])

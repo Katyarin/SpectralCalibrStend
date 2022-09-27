@@ -1,7 +1,7 @@
 import socket
 import time
 
-ADDRESS = '192.168.10.55'
+ADDRESS = '192.168.10.41'
 PORT = 8001
 ENCODING = 'utf-8'
 req = 'get fast'
