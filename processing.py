@@ -9,7 +9,7 @@ current_time = datetime.datetime.now(tz=None)
 date = str(current_time.year) + str(current_time.month) + str(current_time.day)
 group = 3
 
-date = str(2022926)
+date = str(202299)
 
 
 
@@ -27,8 +27,8 @@ with open(str(date) + 'now_written.txt', 'r') as file_written:
         file_list.append(data[2])
 #file_n = '100pages.json'
 path = 'drs_raw_data/'
-path_real = 'd:/data/db/debug/drs/'
-#path_real = 'C:/Users/user/Desktop/drs/'
+#path_real = 'd:/data/db/debug/drs/'
+path_real = 'C:/Users/user/Desktop/drs/'
 delete_s = int(len(path_real))
 
 plot_osc = False
@@ -104,12 +104,9 @@ def to_phe(shotn, file_n, exp):
             else:
                 calc_err[ch].append('')
             if ch == 0 or ch == 7:
-                pre_sig = 100
+                pre_sig = 20
             else:
-                pre_sig = 400
-            base_line = sum(signal[10:pre_sig]) / len(signal[10:pre_sig])
-            for i in range(len(signal)):
-                signal[i] = signal[i] - base_line
+                pre_sig = 100
 
             if ch == 0:
                 index_0 = 0
@@ -119,9 +116,6 @@ def to_phe(shotn, file_n, exp):
                         #print(index_0)
                         break
 
-            for i in range(len(signal)):
-                signal[i] = signal[i] * 1000
-            var_in_sr = np.var(signal[5:pre_sig])
             delta_exp = {}
             if thomson == 'usual':
                 width = 120
@@ -135,6 +129,19 @@ def to_phe(shotn, file_n, exp):
             else:
                 print('something wrong! Unnown config')
                 stop
+
+            #print(index_0 + delta_exp[ch] - pre_sig)
+            base_line = sum(signal[index_0 + delta_exp[ch] - pre_sig:index_0 + delta_exp[ch]]) / len(signal[index_0 + delta_exp[ch] - pre_sig:index_0 + delta_exp[ch]])
+
+            for i in range(len(signal)):
+                signal[i] = signal[i] - base_line
+
+
+
+            for i in range(len(signal)):
+                signal[i] = signal[i] * 1000
+            var_in_sr = np.var(signal[5:pre_sig])
+
             '''start_index = find_start_integration(signal[10:-10]) - 5
             end_index = find_end_integration(signal[10:-10]) + 5'''
             start_index = index_0 + delta_exp[ch]
@@ -147,6 +154,9 @@ def to_phe(shotn, file_n, exp):
                 axs2[int(ch//3), int(ch%3)].plot(signal)
                 axs2[int(ch//3), int(ch%3)].vlines(start_index, min(signal), max(signal))
                 axs2[int(ch//3), int(ch%3)].vlines(end_index, min(signal), max(signal))
+                axs2[int(ch // 3), int(ch % 3)].hlines(sum(signal[10:pre_sig]) / len(signal[10:pre_sig]), 0, len(signal), color='r')
+                axs2[int(ch // 3), int(ch % 3)].hlines(sum(signal[len(signal)-pre_sig:len(signal)-10]) / len(signal[len(signal)-pre_sig:len(signal)-10]), 0,
+                                                       len(signal), color='g')
 
 
             Ni = np.trapz(signal[start_index:end_index],

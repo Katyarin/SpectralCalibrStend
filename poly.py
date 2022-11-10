@@ -2,7 +2,7 @@ import socket
 import time
 
 ADDRESS = '192.168.10.41'
-PORT = 8001
+PORT = 8034
 ENCODING = 'utf-8'
 req = 'get fast'
 REQUEST_TEXT = req.encode(ENCODING)
