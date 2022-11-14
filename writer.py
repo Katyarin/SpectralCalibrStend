@@ -15,8 +15,8 @@ file_for_recording = date + 'now_written.txt'
 files_list = []
 point = 0
 #monochrom.setWavelength(1057)
-for exp in range(1,2):
-    for wav in range(10505, 10630, 1):
+for exp in range(4,5):
+    for wav in range(10504, 10650, 1):
         wave = wav / 10
         print(wave)
         monochrom.setWavelength(wave)

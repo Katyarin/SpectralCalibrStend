@@ -2,14 +2,14 @@ import matplotlib.pyplot as plt
 import json
 import math
 import numpy as np
-import raw_data_to_json
+import raw_data_to_json_v2
 import datetime
 
 current_time = datetime.datetime.now(tz=None)
 date = str(current_time.year) + str(current_time.month) + str(current_time.day)
-group = 3
+group = 4
 
-date = str(202299)
+date = str(20221110)
 
 
 
@@ -26,15 +26,15 @@ with open(str(date) + 'now_written.txt', 'r') as file_written:
         wave_list.append(float(data[1]))
         file_list.append(data[2])
 #file_n = '100pages.json'
-path = 'drs_raw_data/'
+path = 'out/'
 #path_real = 'd:/data/db/debug/drs/'
-path_real = 'C:/Users/user/Desktop/drs/'
+path_real = 'c:/code/TS_T15MD/fast/files/sp_char_divertor/lsAdc_'
 delete_s = int(len(path_real))
 
 plot_osc = False
 plot_exp_sig = True # False
-time_for_start_plot = 26 #ms
-thomson = 'usual' #or 'usual' #or 'ust' or 'divertor'
+time_for_start_plot = 28 #ms
+thomson = 'divertor' #or 'usual' #or 'ust' or 'divertor'
 laser_const = 1
 
 res_data_path = 'phe_data/'
@@ -57,9 +57,9 @@ def find_end_integration(signal):
 
 
 
-def to_phe(shotn, file_n, exp):
+def to_phe(shotn, raw_data, exp):
 
-    filename = path + file_n
+    #filename = path + file_n
 
     M = 100
     el_charge = 1.6 * 10 ** (-19)
@@ -70,7 +70,7 @@ def to_phe(shotn, file_n, exp):
     event_len = 1024
 
     delta = {0: 0, 1: 770, 2: 790, 3: 790, 4: 800, 5: 810, 6: 830, 7: 0}
-    delta_divertor = {0: 0, 1: -480, 2: -470, 3: -460, 4: -450, 5: -440, 6: -25, 7: 0}
+    delta_divertor = {0: 100, 1: 600, 2: 730, 3: 730, 4: 600, 5: 600, 6: 600, 7: 100}
     timestamps = []
     N_photo_el = {}
     var_phe = {}
@@ -83,15 +83,13 @@ def to_phe(shotn, file_n, exp):
         var_phe[ch] = []
         calc_err[ch] = []
 
-    with open(filename, 'r') as file:
-        raw_data = json.load(file)
 
     p = 0
-    for event in raw_data[1:]:
+    for event in raw_data:
         timestamps.append(event['t']/1000 + 3.73)
 
         #if max(event['ch'][1]) > 0.030:
-        if event['t']/1000 + 3.73 > time_for_start_plot and plot_osc and p < 5:
+        if event['t'] > time_for_start_plot and plot_osc and p < 5:
             fig2, axs2 = plt.subplots(3, 3)
             fig2.suptitle(event['t']/1000 + 3.73)
             p += 1
@@ -110,9 +108,9 @@ def to_phe(shotn, file_n, exp):
 
             if ch == 0:
                 index_0 = 0
-                for i, s in enumerate(signal[10:]):
+                for i, s in enumerate(signal[1:]):
                     if s > 0.200:
-                        index_0 = i - 20
+                        index_0 = i
                         #print(index_0)
                         break
 
@@ -130,11 +128,11 @@ def to_phe(shotn, file_n, exp):
                 print('something wrong! Unnown config')
                 stop
 
-            #print(index_0 + delta_exp[ch] - pre_sig)
             base_line = sum(signal[index_0 + delta_exp[ch] - pre_sig:index_0 + delta_exp[ch]]) / len(signal[index_0 + delta_exp[ch] - pre_sig:index_0 + delta_exp[ch]])
-
-            for i in range(len(signal)):
-                signal[i] = signal[i] - base_line
+            raw_signal = signal
+            signal = []
+            for i in range(len(raw_signal)):
+                signal.append(raw_signal[i] - base_line)
 
 
 
@@ -148,12 +146,12 @@ def to_phe(shotn, file_n, exp):
             end_index = start_index + width
 
 
-            if 5>p>0:
+            if 6>p>0:
                 #print(max(event['ch'][5]), event['t']/1000)
                 axs2[int(ch//3), int(ch%3)].set_title('ch = ' + str(ch))
                 axs2[int(ch//3), int(ch%3)].plot(signal)
-                axs2[int(ch//3), int(ch%3)].vlines(start_index, min(signal), max(signal))
-                axs2[int(ch//3), int(ch%3)].vlines(end_index, min(signal), max(signal))
+                axs2[int(ch//3), int(ch%3)].vlines(start_index, min(signal), max(signal), color='m')
+                axs2[int(ch//3), int(ch%3)].vlines(end_index, min(signal), max(signal), color='m')
                 axs2[int(ch // 3), int(ch % 3)].hlines(sum(signal[10:pre_sig]) / len(signal[10:pre_sig]), 0, len(signal), color='r')
                 axs2[int(ch // 3), int(ch % 3)].hlines(sum(signal[len(signal)-pre_sig:len(signal)-10]) / len(signal[len(signal)-pre_sig:len(signal)-10]), 0,
                                                        len(signal), color='g')
@@ -244,7 +242,7 @@ for i, wave in enumerate(wave_list):
         print(wave, ' already done')
         continue
     try:
-        raw_data_to_json.to_json(str(file_list[i][delete_s:]), 7, 'c:/work/Code/SpectralCalibrStend/drs_raw_data/')
+        data = raw_data_to_json_v2.to_json(str(file_list[i][delete_s:]), False)
     except ValueError:
         print('value error in this datafile!!!')
         continue
@@ -252,4 +250,4 @@ for i, wave in enumerate(wave_list):
         plot_osc = True
     else:
         plot_osc = False
-    to_phe(wave, str(file_list[i][delete_s:]) + '.json', exp_list[i])
+    to_phe(wave, data, exp_list[i])
